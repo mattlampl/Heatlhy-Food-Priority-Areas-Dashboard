@@ -32,3 +32,4 @@ The Healthy Food Priority Areas Dashboard attempts to make it easy to get the la
 | 2018 | https://chronicdata.cdc.gov/resource/k25u-mg9b.csv?placename=Pittsburgh |
 | 2017 | https://chronicdata.cdc.gov/resource/kucs-wizg.csv?placename=Pittsburgh |
 | 2016 | https://chronicdata.cdc.gov/resource/5mtz-k78d.csv?placename=Pittsburgh |
+
