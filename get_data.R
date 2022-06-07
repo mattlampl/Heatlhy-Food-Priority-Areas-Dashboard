@@ -3,11 +3,11 @@ library(tidycensus)
 
 #---Static Data---#
 # PGH Tracts
-tracts = read_csv('/Users/mattlampl/Desktop/Food Policy/HFPA_app/Data/Tract.csv') # Tracts from HFPA Estimate Sheet
+tracts = read_csv('Data/Tract.csv') # Tracts from HFPA Estimate Sheet
 pgh.tracts = as.character(tracts$Tract) # convert to vector
 
 # no walkshed
-no.walkshed = read_csv('/Users/mattlampl/Desktop/Food Policy/HFPA_app/Data/no_walkshed.csv')
+no.walkshed = read_csv('Data/no_walkshed.csv')
 no.walkshed = mutate(no.walkshed, GEOID = as.character(GEOID))
 
 # Census API Key
