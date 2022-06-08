@@ -11,7 +11,7 @@ ui <- fluidPage(
   titlePanel(title = 'HFPA'),
   fluidRow(
     column(width = 3,
-           selectInput(inputId = 'yearSelect', label = 'Select Year', choices = last.5.years),
+           selectInput(inputId = 'yearSelect', label = 'Select Year', choices = last.10.years),
            selectInput(inputId = 'varSelect', label = 'Select Metric for Map and Trend Graph', 
                        choices = c('HFPA', 'Availability', 'Access', 'Utilization')),
            sliderInput(inputId = 'alphaSlider', 
@@ -26,7 +26,10 @@ ui <- fluidPage(
                       h1(textOutput(outputId = 'mapTitle')),
                       #plotlyOutput(outputId = 'mapPlot', height = '900px'),
                       tmapOutput(outputId = 'tmapPlot', height = '800px')),
-             tabPanel('Trends', plotlyOutput(outputId = 'comparePlot', height = '600px')),
+             tabPanel('Trends',
+                      checkboxInput(inputId = 'trendlineCheckbox', label = 'Show Trendline', value = T),
+                      plotlyOutput(outputId = 'comparePlot', height = '600px'),
+                      verbatimTextOutput(outputId = 'regressionResults')),
              tabPanel('Raw Data',
                       downloadButton(outputId = 'downloadData', label = 'Download'),
                       dataTableOutput(outputId = 'yearTable'))
@@ -40,10 +43,7 @@ server <- function(input, output, session) {
   metric = reactive({input$varSelect})
   tracts = reactive({input$tractSelect})
   map.alpha = reactive({input$alphaSlider})
-  
-  # Get basemap
-  bbox = c(-80.1051, 40.3557, -79.86, 40.5028)
-  pgh.map = get_stamenmap(bbox = bbox)
+  show.trendline = reactive({input$trendlineCheckbox})
   
   data.table = reactive({
     HFPA.data %>%
@@ -51,17 +51,6 @@ server <- function(input, output, session) {
       filter(year == year()) %>%
       select(GEOID, year, Availability, Access, Utilization, HFPA)
   })
-  
-  # output$mapPlot = renderPlotly({
-  #   p = ggplot(data = filter(HFPA.data, year == year()), 
-  #              aes(fill = .data[[input$varSelect]], text = paste('Tract:', GEOID))) + # Plot only the PGH Tracts
-  #     geom_sf(color = 'black', size = 0.2) +
-  #     scale_fill_distiller(palette = 'GnBu', direction = 1) +
-  #     theme_void() +
-  #     labs(title = paste(metric(), ': ', year(), sep = ''))
-  #   
-  #   ggplotly(p)
-  # }) # mapPlot
   
   output$mapTitle = renderText({
     paste(metric(), ': ', year(), sep = '')
@@ -76,14 +65,35 @@ server <- function(input, output, session) {
   output$comparePlot = renderPlotly({
     p = ggplot(data = filter(HFPA.data, GEOID %in% tracts()),
                mapping = aes(x = year, y = .data[[input$varSelect]], color = GEOID)) +
-      geom_smooth(size = 1, method = 'lm', se = F) +
       geom_line(size = 1, alpha = .5) +
       geom_point(size = 3, alpha = .5) +
       scale_color_brewer(palette = 'Set1') +
       labs(title = metric(), color = 'Tract') +
       theme_minimal()
-    ggplotly(p)
+    
+    if (show.trendline() == F) {
+      ggplotly(p)
+    }
+    else {
+      p = p + geom_smooth(size = 1, method = 'lm', se = F)
+      ggplotly(p)
+    }
   }) # comparePlot
+  
+  output$regressionResults = renderText({
+    output = ''
+    for (tract in tracts()) {
+      model = lm(data = filter(HFPA.data, GEOID == tract), formula = paste(metric(), '~ year'))
+      year.coef = round(model$coefficients['year'], 2)
+      year.pval = round(summary(model)$coef[8], 2)
+      regression.output = paste('Tract', tract, 
+                                'is associated with a', year.coef, 'change in', 
+                                metric(), 'for each additional year (p-val:)', year.pval)
+      #print(tract)
+      output = paste(output, regression.output, '\n')
+    }
+    output
+  }) # Regression Results
   
   output$yearTable = renderDataTable({
     data.table()

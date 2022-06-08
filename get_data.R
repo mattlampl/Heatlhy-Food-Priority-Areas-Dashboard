@@ -59,7 +59,7 @@ get.500.cities.endpoint = function(supplied.year) {
 
 # Get current year and lat 5 and 10 years
 current.year = as.numeric(format(Sys.Date(), '%Y'))
-last.10.years = seq(from = current.year - 2, to = current.year - 11, by = -1)
+last.10.years = seq(from = current.year - 2, to = current.year - 10, by = -1)
 last.5.years = seq(from = current.year - 2, to = current.year - 6, by = -1)
 
 
@@ -67,7 +67,7 @@ last.5.years = seq(from = current.year - 2, to = current.year - 6, by = -1)
 HFPA.data = data.frame()
 #-----------------#
 
-for (year in last.5.years) {
+for (year in last.10.years) {
   # Start with availability
   year.data = get.census.var(var.id = 'B08201_001', year = year, var.name = 'Total_HH', geometry = TRUE) # total_HH
   year.data = year.data %>%

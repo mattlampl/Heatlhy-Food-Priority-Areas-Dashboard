@@ -6,21 +6,21 @@ The Healthy Food Priority Areas Dashboard attempts to make it easy to get the la
 
 | GEOID | year | Total_HH | No_Vehicle_Avail | pct_no_veh_avail | no_veh_std | No_Vehicle_Score |
 | --- | --- | --- | --- | --- | --- | --- |
-| Tract | Year | B08201_001 | B08014_002 | ⁍ | ⁍ | ⁍ |
+| Tract | Year | B08201_001 | B08014_002 | $$\frac{\text{Total HH}}{\text{No Vehicle Avail}}$$ | $$\frac{\text{pct no veh avail}-\frac{\text{sum(no vehicle avail)}}{\text{sum(total HH)}}}{\text{sd(pct no veh avail)}}$$ | $$\text{(no veh std) - min(no veh std)} \times \frac{10}{\text{Max(no veh std)}-\text{Min(no veh std)}}$$ |
 
 | pct_walkable | pct_walkable_std | Walkability_Score |
 | --- | --- | --- |
-| From Excel Sheet | ⁍ | ⁍ |
+| From Excel Sheet | $$\frac{\text{pct walkable}-\text{Mean(pct walkable)}}{\text{sd(pct walkable)}}$$ | $$\text{(pct walkable std - min(pct walkable std))} \times \frac{10}{\text{max(pct walkable std}-\text{min(pct walkable std)}}$$ |
 
 | Availability |
 | --- |
-| ⁍ |
+| $$\sqrt{\text{No Vehicle Score} \times \text{Walkability Score}}$$ |
 
 # Access
 
 | GEOID | Year | pop_below_185 | total_pop | pct_below_185 | pct_185_std | Access |
 | --- | --- | --- | --- | --- | --- | --- |
-| Tract | Year | S1701_C01_041 | S0101_C01_001 | ⁍ | ⁍ | ⁍ |
+| Tract | Year | S1701_C01_041 | S0101_C01_001 | $$\frac{\text{pop below 185}}{\text{total pop}}$$ | $$\frac{\text{pct below 185}-\text{Mean(pct below 185)}}{\text{sd(pct below 185)}}$$ | $$\text{(pct 185 std - MIN(pct 185 std))} \times \frac{10}{\text{MAX(pct 185 std)}-\text{MIN(pct 185 std)}}$$ |
 
 # Utilization
 
