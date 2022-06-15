@@ -1,0 +1,45 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+HFPA.data %>%
+  group_by(year) %>%
+  summarize(mean = mean(HFPA, na.rm = T),
+            sd = sd(HFPA, na.rm = T))
+```
+
+
+```{r}
+HFPA.data %>%
+  group_by(year) %>%
+  mutate(Priority.Area = case_when(HFPA >= (mean(HFPA, na.rm = T) + sd(HFPA, na.rm = T)) ~ '1 SD Above Mean',
+                   HFPA <= (mean(HFPA, na.rm = T) - sd(HFPA, na.rm = T)) ~ '1 SD Below Mean',
+                   TRUE ~ 'Not Anomalous'
+                   ))
+```
+
+```{r}
+num.anomalous = HFPA.data %>%
+  group_by(year, Priority.Area) %>%
+  summarize(count = n())
+num.anomalous %>%
+  filter(Priority.Area == '1 SD Above Mean') %>%
+  ggplot(mapping = aes(x = year, y = count)) +
+  geom_col()
+```
+```{r}
+ggplot(data = HFPA.data, aes(fill = Priority.Area, text = GEOID)) +
+      geom_sf(color = 'black', size = .2) +
+      facet_wrap('year') +
+      scale_fill_brewer(palette = 'Set1') +
+      theme_void() +
+      theme(strip.background = element_rect(fill = 'gold1')) +
+      labs(title = 'Priority Areas by Year', fill = 'Priority Area')
+```
+

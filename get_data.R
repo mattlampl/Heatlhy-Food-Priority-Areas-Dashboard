@@ -105,7 +105,8 @@ for (year in last.10.years) {
     mutate(obesity_norm = normalized.score(obesity_crudeprev), # Normalize the columns
            chd_norm = normalized.score(chd_crudeprev),
            diabetes_norm = normalized.score(diabetes_crudeprev),
-           Utilization = obesity_norm + chd_norm + diabetes_norm) # Calculate utilization!
+           Utilization = obesity_norm + chd_norm + diabetes_norm,
+           Utilization = normalized.score(Utilization)) # Calculate utilization!
   # Join it in with the rest
   year.data = year.data %>%
     left_join(y = utilization, by = 'GEOID')
@@ -115,4 +116,9 @@ for (year in last.10.years) {
 }
 
 HFPA.data = HFPA.data %>%
-  mutate(HFPA = Availability + Access + Utilization)
+  mutate(HFPA = Availability + Access + Utilization) %>%
+  group_by(year) %>%
+  mutate(Priority.Area = case_when(HFPA >= (mean(HFPA, na.rm = T) + sd(HFPA, na.rm = T)) ~ '1 SD Above Mean',
+                                   HFPA <= (mean(HFPA, na.rm = T) - sd(HFPA, na.rm = T)) ~ '1 SD Below Mean',
+                                   TRUE ~ 'Not Anomalous'
+  ))

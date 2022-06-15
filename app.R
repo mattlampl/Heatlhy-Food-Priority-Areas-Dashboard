@@ -21,12 +21,14 @@ ui <- fluidPage(
                         column(width = 2, selectInput(inputId = 'basemap', label = 'Basemap:', 
                                                       choices = c('Esri.WorldTopoMap', 'OpenStreetMap', 'CartoDB'))),
                         column(width = 2, selectInput(inputId = 'yearSelect', label = 'Select Year', choices = last.10.years)), # select year
-                        column(width = 2, selectInput(inputId = 'varSelect', label = 'Select Metric', 
-                                                      choices = c('HFPA', 'Availability', 'Access', 'Utilization'))), # select metric
                         column(width = 3, sliderInput(inputId = 'alphaSlider', 
-                                                      label = 'Adjust Map Transparency', min = 0, max = 1, value = .8)) # transparency slider
+                                                      label = 'Adjust Map Transparency', min = 0, max = 1, value = .8)), # transparency slider
+                        column(width = 2, checkboxInput(inputId = 'showCompareMap', 
+                                                        label = 'Show Comparison Map', value = FALSE), # compare map checkbox
+                               selectInput(inputId = 'compareYearSelect', label = 'Select Year to Compare', choices = last.10.years),) # compare map year
                       ), # fluidRow
-                      tmapOutput(outputId = 'tmapPlot', height = '800px')), # Map
+                      uiOutput(outputId = 'adaptiveMap'), # Adaptive Map controls in the server section
+                      ), # Map Tab
              tabPanel('Raw Data',
                       h1(textOutput(outputId = 'rawDataTitle')),
                       downloadButton(outputId = 'downloadData', label = 'Download'),
@@ -37,18 +39,20 @@ ui <- fluidPage(
                       fluidRow(
                         column(width = 3, selectizeInput(inputId = 'tractSelect', label = 'Select Tracts for Trend Graph', 
                                                          choices = unique(HFPA.data$GEOID), multiple = T, selected = '42003191700')), # tract select
+                        column(width = 2, selectInput(inputId = 'varSelect', label = 'Select Metric', 
+                                                      choices = c('HFPA', 'Availability', 'Access', 'Utilization'))), # select metric
                         column(width = 2, 
                                checkboxInput(inputId = 'trendlineCheckbox', label = 'Show Trendline', value = T), # trendline box
                                checkboxInput(inputId = 'seCheckbox', label = 'Show Standard Errors', value = F)) # se box
                         ),
-                      plotlyOutput(outputId = 'comparePlot', height = '600px'),
+                      plotlyOutput(outputId = 'comparePlot', height = '300px'),
                       br(),
                       verbatimTextOutput(outputId = 'regressionResults'),
-                      plotlyOutput(outputId = 'rankedPlot', height = '600px'),
+                      plotlyOutput(outputId = 'priorityMap', height = '800px'),
                       fluidRow(
                         column(width = 6, plotOutput(outputId = 'distPlot')),
                         column(width = 6, plotOutput(outputId = 'meanPlot'))
-                        ),
+                      ),
                       ), # Trends
              ), #tabsetPanel
            ), # column
@@ -63,6 +67,8 @@ server <- function(input, output, session) {
   show.trendline = reactive({input$trendlineCheckbox})
   show.se = reactive({input$seCheckbox})
   basemap = reactive({input$basemap})
+  show.comparison = reactive({input$showCompareMap})
+  compare.year = reactive({input$compareYearSelect})
   
   data.table = reactive({
     HFPA.data %>%
@@ -75,8 +81,34 @@ server <- function(input, output, session) {
     paste(metric(), ': ', year(), sep = '')
   })
   
+  output$adaptiveMap = renderUI({
+    if (show.comparison()) {
+      #selectInput(inputId = 'compareYearSelect', label = 'Select Year to Compare', choices = last.10.years), # compare map year
+      fluidRow(
+        column(width = 6,
+               h3(paste(metric(), year())),
+               tmapOutput(outputId = 'tmapPlot', height = '800px')), # Map
+        column(width = 6, 
+               h3(paste(metric(), compare.year())),
+               tmapOutput(outputId = 'tmapCompare', height = '800px')) # Comparison Map
+      ) # fluidRow
+    }
+    else {
+      fluidRow(
+        column(width = 12, tmapOutput(outputId = 'tmapPlot', height = '800px')), # Map
+        #column(width = 6, tmapOutput(outputId = 'tmapCompare', height = '800px')) # Comparison Map
+      ) # fluidRow
+    }
+  })
+  
   output$tmapPlot = renderTmap({
     tm_shape(filter(HFPA.data, year == year())) +
+      tm_basemap(basemap()) +
+      tm_polygons(metric(), alpha = map.alpha(), palette = 'BuPu')
+  }) # render Map
+  
+  output$tmapCompare = renderTmap({
+    tm_shape(filter(HFPA.data, year == compare.year())) +
       tm_basemap(basemap()) +
       tm_polygons(metric(), alpha = map.alpha(), palette = 'BuPu')
   }) # render Map
@@ -124,22 +156,22 @@ server <- function(input, output, session) {
     output
   }) # Regression Results
   
-  output$rankedPlot = renderPlotly({
-    p = ggplot(data = HFPA.data,
-               mapping = aes(sample = .data[[input$varSelect]])) +
-      stat_qq(geom = 'point', distribution = 'qunif') +
-      facet_grid(cols = vars(year)) +
-      labs(title = 'Quantile Plot by Year', x = '', y = metric()) +
-      theme_bw() +
+  output$priorityMap = renderPlotly({
+    p = ggplot(data = HFPA.data, aes(fill = Priority.Area, text = GEOID)) +
+      geom_sf(color = 'black', size = .2) +
+      facet_wrap('year') +
+      scale_fill_brewer(palette = 'Set1') +
+      theme_void() +
       theme(strip.background = element_rect(fill = 'gold1')) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = -1))
+      labs(title = 'Priority Areas by Year', fill = 'Priority Area')
     ggplotly(p)
   })
   
   output$distPlot = renderPlot({
     p = ggplot(data = HFPA.data, mapping = aes(x = HFPA, color = as.factor(year))) +
-      geom_density() +
-      labs(title = paste(metric(), 'Distribution by Year'), x = metric(), y = 'Density') +
+      geom_density(size = 2) +
+      labs(title = paste(metric(), 'Distribution by Year'), x = metric(), y = 'Density', color = 'Year') +
+      scale_color_brewer(palette = 'YlGnBu') +
       theme_minimal()
     p
   })
@@ -153,7 +185,7 @@ server <- function(input, output, session) {
       geom_line(color = 'darkblue') +
       geom_point(size = 3) +
       labs(title = 'Mean HFPA by Year', x = 'Year', y = 'HFPA') +
-      ylim(0, 40) +
+      ylim(0, 30) +
       theme_minimal()
     p
   })
