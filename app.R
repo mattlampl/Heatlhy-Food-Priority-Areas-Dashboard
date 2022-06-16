@@ -4,6 +4,8 @@ library(tidycensus)
 library(plotly)
 library(sf)
 library(tmap)
+library(shinyWidgets)
+#source('get_data.R')
 
 # Load Data from get_data.R for now
 
@@ -11,8 +13,8 @@ ui <- fluidPage(
   titlePanel(title = 'HFPA'),
   fluidRow(
     column(width = 3,
+           actionButton(inputId = 'getData', label = 'Get Data')
            ), # column
-    
     column(width = 10, offset = 1,
            tabsetPanel(
              tabPanel('Map',
@@ -48,7 +50,7 @@ ui <- fluidPage(
                       plotlyOutput(outputId = 'comparePlot', height = '300px'),
                       br(),
                       verbatimTextOutput(outputId = 'regressionResults'),
-                      plotlyOutput(outputId = 'priorityMap', height = '800px'),
+                      plotlyOutput(outputId = 'priorityMap', height = '850px'),
                       fluidRow(
                         column(width = 6, plotOutput(outputId = 'distPlot')),
                         column(width = 6, plotOutput(outputId = 'meanPlot'))
@@ -69,6 +71,10 @@ server <- function(input, output, session) {
   basemap = reactive({input$basemap})
   show.comparison = reactive({input$showCompareMap})
   compare.year = reactive({input$compareYearSelect})
+  
+  #HFPA.data = eventReactive(input$getData, {
+    #get.data()
+  #})
   
   data.table = reactive({
     HFPA.data %>%
@@ -160,15 +166,16 @@ server <- function(input, output, session) {
     p = ggplot(data = HFPA.data, aes(fill = Priority.Area, text = GEOID)) +
       geom_sf(color = 'black', size = .2) +
       facet_wrap('year') +
-      scale_fill_brewer(palette = 'Set1') +
+      scale_fill_discrete(type = c('#ca0020', 'White', '#abd9e9')) +
       theme_void() +
-      theme(strip.background = element_rect(fill = 'gold1')) +
+      theme(strip.background = element_rect(fill = 'gold1'),
+            panel.background = element_rect(fill = 'grey80')) +
       labs(title = 'Priority Areas by Year', fill = 'Priority Area')
     ggplotly(p)
   })
   
   output$distPlot = renderPlot({
-    p = ggplot(data = HFPA.data, mapping = aes(x = HFPA, color = as.factor(year))) +
+    p = ggplot(data = HFPA.data, mapping = aes(x = .data[[input$varSelect]], color = as.factor(year))) +
       geom_density(size = 2) +
       labs(title = paste(metric(), 'Distribution by Year'), x = metric(), y = 'Density', color = 'Year') +
       scale_color_brewer(palette = 'YlGnBu') +

@@ -5,6 +5,7 @@ output: html_notebook
 
 ```{r}
 library(tidyverse)
+library(ggthemes)
 ```
 
 ```{r}
@@ -34,12 +35,17 @@ num.anomalous %>%
   geom_col()
 ```
 ```{r}
-ggplot(data = HFPA.data, aes(fill = Priority.Area, text = GEOID)) +
-      geom_sf(color = 'black', size = .2) +
-      facet_wrap('year') +
-      scale_fill_brewer(palette = 'Set1') +
-      theme_void() +
-      theme(strip.background = element_rect(fill = 'gold1')) +
-      labs(title = 'Priority Areas by Year', fill = 'Priority Area')
+HFPA.data %>%
+  ungroup() %>%
+  mutate(Priority.Area = ordered(x = Priority.Area, levels = c('1 SD Above Mean', 'Not Anomalous', '1 SD Below Mean'))) %>%
+  ggplot(aes(fill = Priority.Area, text = GEOID)) +
+    geom_sf(color = 'black', size = .2) +
+    facet_wrap('year') +
+    scale_fill_discrete(type = c('#ca0020', 'White', '#abd9e9')) +
+    #scale_fill_brewer(palette = 'RdGy') +
+    theme_void() +
+    theme(strip.background = element_rect(fill = 'gold1'), 
+          panel.background  = element_rect(fill = 'grey')) +
+    labs(title = 'Priority Areas by Year', fill = 'Priority Area')
 ```
 

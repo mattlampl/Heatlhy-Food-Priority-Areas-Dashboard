@@ -1,6 +1,8 @@
 library(tidyverse)
 library(tidycensus)
 
+
+
 #---Static Data---#
 # PGH Tracts
 tracts = read_csv('Data/Tract.csv') # Tracts from HFPA Estimate Sheet
@@ -63,62 +65,71 @@ last.10.years = seq(from = current.year - 2, to = current.year - 10, by = -1)
 last.5.years = seq(from = current.year - 2, to = current.year - 6, by = -1)
 
 
-# Empty HFPA.data data frame
-HFPA.data = data.frame()
-#-----------------#
-
-for (year in last.10.years) {
-  # Start with availability
-  year.data = get.census.var(var.id = 'B08201_001', year = year, var.name = 'Total_HH', geometry = TRUE) # total_HH
-  year.data = year.data %>%
-    inner_join(y = select(get.census.var(var.id = 'B08014_002', year = year, var.name = 'No_Vehicle_Avail'), 
-                          c(GEOID, No_Vehicle_Avail)), by = 'GEOID') # Join in No_Vehicle_Avail
-  year.data = year.data %>%
-    mutate(pct_no_veh_avail = Total_HH/No_Vehicle_Avail,
-           pct_no_veh_avail = replace(pct_no_veh_avail, is.nan(pct_no_veh_avail) | is.infinite(pct_no_veh_avail), NA), # Replace NaN and Inf with NA
-           No_Vehicle_Score = normalized.score(pct_no_veh_avail)) # get no_vehicle_score
-  year.data = year.data %>%
-    inner_join(y = no.walkshed, by = 'GEOID') %>% # Join no_walkshed
-    mutate(Walkability_Score = normalized.score(no_walkshed)) # Get walkability_score
-  year.data = year.data %>%
-    mutate(Availability = sqrt(No_Vehicle_Score * Walkability_Score)) # get final Availiability score
+get.data = function() {
+  # Empty HFPA.data data frame
+  HFPA.data = data.frame()
+  #-----------------#
   
-  # Join in the Access metrics
-  # Get pop below 185% Poverty Level
-  year.data = year.data %>%
-    inner_join(y = select(get.census.var(var.id = 'S1701_C01_041', year = year, var.name = 'pop_below_185'), c(GEOID, pop_below_185)), by = 'GEOID') %>%
-    inner_join(y = select(get.census.var(var.id = 'S0101_C01_001', year = year, var.name = 'total_pop'), c(GEOID, total_pop)), by = 'GEOID')
+  for (year in last.10.years) {
+    # Start with availability
+    year.data = get.census.var(var.id = 'B08201_001', year = year, var.name = 'Total_HH', geometry = TRUE) # total_HH
+    year.data = year.data %>%
+      inner_join(y = select(get.census.var(var.id = 'B08014_002', year = year, var.name = 'No_Vehicle_Avail'), 
+                            c(GEOID, No_Vehicle_Avail)), by = 'GEOID') # Join in No_Vehicle_Avail
+    year.data = year.data %>%
+      mutate(pct_no_veh_avail = Total_HH/No_Vehicle_Avail,
+             pct_no_veh_avail = replace(pct_no_veh_avail, is.nan(pct_no_veh_avail) | is.infinite(pct_no_veh_avail), NA), # Replace NaN and Inf with NA
+             No_Vehicle_Score = normalized.score(pct_no_veh_avail)) # get no_vehicle_score
+    year.data = year.data %>%
+      inner_join(y = no.walkshed, by = 'GEOID') %>% # Join no_walkshed
+      mutate(Walkability_Score = normalized.score(no_walkshed)) # Get walkability_score
+    year.data = year.data %>%
+      mutate(Availability = sqrt(No_Vehicle_Score * Walkability_Score)) # get final Availiability score
+    
+    # Join in the Access metrics
+    # Get pop below 185% Poverty Level
+    year.data = year.data %>%
+      inner_join(y = select(get.census.var(var.id = 'S1701_C01_041', year = year, var.name = 'pop_below_185'), c(GEOID, pop_below_185)), by = 'GEOID') %>%
+      inner_join(y = select(get.census.var(var.id = 'S0101_C01_001', year = year, var.name = 'total_pop'), c(GEOID, total_pop)), by = 'GEOID')
+    
+    # Create the rest of the columns
+    year.data = year.data %>%
+      mutate(pct_below_185 = pop_below_185 / total_pop,
+             Access = normalized.score(pct_below_185)) # get the normalized pct_below_185
+    
+    # Join in the Utilization metrics
+    # create the url from the get.500.cities.endpoint function
+    URL = paste('https://chronicdata.cdc.gov/resource/', get.500.cities.endpoint(year), '?placename=Pittsburgh', sep='')
+    utilization = read_csv(URL) # create temp dataframe with just that year's data
+    # create necessary normalized columns for the year
+    utilization = utilization %>%
+      mutate(GEOID = as.character(tractfips)) %>%  # Change to GEOID
+      select(GEOID, obesity_crudeprev, chd_crudeprev, diabetes_crudeprev) %>% # Keep only necessary columns 
+      mutate(obesity_norm = normalized.score(obesity_crudeprev), # Normalize the columns
+             chd_norm = normalized.score(chd_crudeprev),
+             diabetes_norm = normalized.score(diabetes_crudeprev),
+             Utilization = obesity_norm + chd_norm + diabetes_norm,
+             Utilization = normalized.score(Utilization)) # Calculate utilization!
+    # Join it in with the rest
+    year.data = year.data %>%
+      left_join(y = utilization, by = 'GEOID')
+    
+    # Bind everything above to the main HFPA.data dataframe and make final HFPA column
+    HFPA.data = rbind(HFPA.data, year.data)
+  }
   
-  # Create the rest of the columns
-  year.data = year.data %>%
-    mutate(pct_below_185 = pop_below_185 / total_pop,
-           Access = normalized.score(pct_below_185)) # get the normalized pct_below_185
+  HFPA.data = HFPA.data %>%
+    mutate(HFPA = Availability + Access + Utilization) %>%
+    group_by(year) %>%
+    mutate(Priority.Area = case_when(HFPA >= (mean(HFPA, na.rm = T) + sd(HFPA, na.rm = T)) ~ '1 SD Above Mean',
+                                     HFPA <= (mean(HFPA, na.rm = T) - sd(HFPA, na.rm = T)) ~ '1 SD Below Mean',
+                                     TRUE ~ 'Not Anomalous'
+    )) %>%
+    ungroup() %>%
+    mutate(Priority.Area = ordered(x = Priority.Area, levels = c('1 SD Above Mean', 'Not Anomalous', '1 SD Below Mean')))
   
-  # Join in the Utilization metrics
-  # create the url from the get.500.cities.endpoint function
-  URL = paste('https://chronicdata.cdc.gov/resource/', get.500.cities.endpoint(year), '?placename=Pittsburgh', sep='')
-  utilization = read_csv(URL) # create temp dataframe with just that year's data
-  # create necessary normalized columns for the year
-  utilization = utilization %>%
-    mutate(GEOID = as.character(tractfips)) %>%  # Change to GEOID
-    select(GEOID, obesity_crudeprev, chd_crudeprev, diabetes_crudeprev) %>% # Keep only necessary columns 
-    mutate(obesity_norm = normalized.score(obesity_crudeprev), # Normalize the columns
-           chd_norm = normalized.score(chd_crudeprev),
-           diabetes_norm = normalized.score(diabetes_crudeprev),
-           Utilization = obesity_norm + chd_norm + diabetes_norm,
-           Utilization = normalized.score(Utilization)) # Calculate utilization!
-  # Join it in with the rest
-  year.data = year.data %>%
-    left_join(y = utilization, by = 'GEOID')
   
-  # Bind everything above to the main HFPA.data dataframe and make final HFPA column
-  HFPA.data = rbind(HFPA.data, year.data)
+  return (HFPA.data)
 }
 
-HFPA.data = HFPA.data %>%
-  mutate(HFPA = Availability + Access + Utilization) %>%
-  group_by(year) %>%
-  mutate(Priority.Area = case_when(HFPA >= (mean(HFPA, na.rm = T) + sd(HFPA, na.rm = T)) ~ '1 SD Above Mean',
-                                   HFPA <= (mean(HFPA, na.rm = T) - sd(HFPA, na.rm = T)) ~ '1 SD Below Mean',
-                                   TRUE ~ 'Not Anomalous'
-  ))
+HFPA.data = get.data()
