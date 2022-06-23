@@ -5,7 +5,9 @@ output: html_notebook
 
 ```{r}
 library(tidyverse)
+library(sf)
 library(ggthemes)
+library(class)
 ```
 
 ```{r}
@@ -47,5 +49,26 @@ HFPA.data %>%
     theme(strip.background = element_rect(fill = 'gold1'), 
           panel.background  = element_rect(fill = 'grey')) +
     labs(title = 'Priority Areas by Year', fill = 'Priority Area')
+```
+
+```{r}
+HFPA.knn = HFPA.data %>%
+  mutate(Priority.Class = 
+           case_when(Priority.Area == '1 SD Above Mean' ~ 1,
+                     T ~ 0),
+         Priority.Class = as.factor(Priority.Class)) %>%
+  st_set_geometry(NULL)
+```
+
+```{r}
+write_csv(HFPA.knn, 'HFPA_class.csv')
+```
+
+
+```{r}
+```
+
+
+```{r}
 ```
 

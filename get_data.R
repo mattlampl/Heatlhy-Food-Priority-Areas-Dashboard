@@ -70,7 +70,7 @@ get.data = function() {
   HFPA.data = data.frame()
   #-----------------#
   
-  for (year in last.10.years) {
+  for (year in last.10.years) { # Change back to last.10.years
     # Start with availability
     year.data = get.census.var(var.id = 'B08201_001', year = year, var.name = 'Total_HH', geometry = TRUE) # total_HH
     year.data = year.data %>%
@@ -132,4 +132,4 @@ get.data = function() {
   return (HFPA.data)
 }
 
-HFPA.data = get.data()
+#HFPA.data = get.data()

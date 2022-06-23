@@ -5,7 +5,7 @@ library(plotly)
 library(sf)
 library(tmap)
 library(shinyWidgets)
-#source('get_data.R')
+source('get_data.R')
 
 # Load Data from get_data.R for now
 
@@ -39,8 +39,9 @@ ui <- fluidPage(
                       dataTableOutput(outputId = 'yearTable')), # Raw Data
              tabPanel('Trends',
                       fluidRow(
-                        column(width = 3, selectizeInput(inputId = 'tractSelect', label = 'Select Tracts for Trend Graph', 
-                                                         choices = unique(HFPA.data$GEOID), multiple = T, selected = '42003191700')), # tract select
+                        #column(width = 3, selectizeInput(inputId = 'tractSelect', label = 'Select Tracts for Trend Graph', 
+                                                         #choices = unique(HFPA.data$GEOID), multiple = T, selected = '42003191700')), # tract select
+                        column(width = 3, uiOutput(outputId = 'adaptiveTractSelect')),
                         column(width = 2, selectInput(inputId = 'varSelect', label = 'Select Metric', 
                                                       choices = c('HFPA', 'Availability', 'Access', 'Utilization'))), # select metric
                         column(width = 2, 
@@ -76,6 +77,16 @@ server <- function(input, output, session) {
     #get.data()
   #})
   
+  observeEvent(input$getData, {
+    HFPA.data = get.data()
+    showModal(modalDialog(
+      title = 'Data Retrieved',
+      "Census Data has been Gathered",
+      easyClose = TRUE,
+      footer = NULL
+    ))
+  })
+  
   data.table = reactive({
     HFPA.data %>%
       st_set_geometry(NULL) %>%
@@ -105,6 +116,11 @@ server <- function(input, output, session) {
         #column(width = 6, tmapOutput(outputId = 'tmapCompare', height = '800px')) # Comparison Map
       ) # fluidRow
     }
+  })
+  
+  output$adaptiveTractSelect = renderUI({
+    selectizeInput(inputId = 'tractSelect', label = 'Select Tracts for Trend Graph', 
+                   choices = unique(HFPA.data$GEOID), multiple = T, selected = '42003191700')
   })
   
   output$tmapPlot = renderTmap({
