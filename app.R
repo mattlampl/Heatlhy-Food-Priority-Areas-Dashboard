@@ -8,6 +8,8 @@ library(shinyWidgets)
 source('get_data.R')
 
 # Load Data from get_data.R for now
+# HFPA.data = get.data()
+
 
 ui <- fluidPage(
   titlePanel(title = 'HFPA'),
@@ -33,6 +35,8 @@ ui <- fluidPage(
                       ), # Map Tab
              tabPanel('Raw Data',
                       h1(textOutput(outputId = 'rawDataTitle')),
+                      selectInput(inputId = 'tableYearSelect', label = 'Select Year for Table',
+                                  choices = append(last.10.years, "All", 0)),
                       downloadButton(outputId = 'downloadData', label = 'Download'),
                       br(),
                       br(),
@@ -72,6 +76,7 @@ server <- function(input, output, session) {
   basemap = reactive({input$basemap})
   show.comparison = reactive({input$showCompareMap})
   compare.year = reactive({input$compareYearSelect})
+  table.year = reactive({input$tableYearSelect})
   
   #HFPA.data = eventReactive(input$getData, {
     #get.data()
@@ -88,10 +93,16 @@ server <- function(input, output, session) {
   })
   
   data.table = reactive({
-    HFPA.data %>%
-      st_set_geometry(NULL) %>%
-      filter(year == year()) %>%
-      select(GEOID, year, Availability, Access, Utilization, HFPA)
+    if (table.year() == "All") {
+      data.table = HFPA.data %>%
+        st_set_geometry(NULL)
+    }
+    else {
+      data.table = HFPA.data %>%
+        st_set_geometry(NULL) %>%
+        filter(year == table.year())
+    }
+    return(data.table)
   })
   
   output$mapTitle = renderText({
@@ -214,7 +225,7 @@ server <- function(input, output, session) {
   })
   
   output$rawDataTitle = renderText({
-    paste('Raw Data for', year())
+    paste('Raw Data for', table.year())
   })
   
   output$yearTable = renderDataTable({
@@ -223,7 +234,7 @@ server <- function(input, output, session) {
   
   output$downloadData = downloadHandler(
     filename = function(){
-      paste('HFPA_data_', year(), '.csv', sep='')
+      paste('HFPA_data_', table.year(), '.csv', sep='')
     },
     content = function(con){
       write.csv(x = data.table(), con)
