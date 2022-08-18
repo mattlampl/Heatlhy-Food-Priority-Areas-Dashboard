@@ -1,35 +1,34 @@
-# Heatlhy-Food-Priority-Areas-Dashboard
 
-The Healthy Food Priority Areas Dashboard attempts to make it easy to get the latest data needed to calculate the HFPA score for Pittsburgh census tracts. The app connects to the census API in order to pull in the required metrics to calculate ***Availability**, **Access**,* and ***Utilization***. The tables below outline how each metric is calculated and normalized The resulting HFPA score is the sum of three scores.
+# Food Security
 
-# Availability
+Tools and scripts for generating data about food security for the City of Pittsburgh. See https://pittsburghpa.gov/dcp/food-access-programs.
 
-| GEOID | year | Total_HH | No_Vehicle_Avail | pct_no_veh_avail | no_veh_std | No_Vehicle_Score |
-| --- | --- | --- | --- | --- | --- | --- |
-| Tract | Year | B08201_001 | B08014_002 | $$\frac{\text{Total HH}}{\text{No Vehicle Avail}}$$ | $$\frac{\text{pct no veh avail}-\frac{\text{sum(no vehicle avail)}}{\text{sum(total HH)}}}{\text{sd(pct no veh avail)}}$$ | $$\text{(no veh std) - min(no veh std)} \times \frac{10}{\text{Max(no veh std)}-\text{Min(no veh std)}}$$ |
+## Healthy Food Priority Areas
 
-| pct_walkable | pct_walkable_std | Walkability_Score |
-| --- | --- | --- |
-| From Excel Sheet | $$\frac{\text{pct walkable}-\text{Mean(pct walkable)}}{\text{sd(pct walkable)}}$$ | $$\text{(pct walkable std - min(pct walkable std))} \times \frac{10}{\text{max(pct walkable std}-\text{min(pct walkable std)}}$$ |
+These are census tracts in which the risks of food insecurity are the most critical. Methodology for how these have been determined can be found in the [FeedPGH Report](https://pittsburghpa.gov/dcp/food-access-programs).
 
-| Availability |
-| --- |
-| $$\sqrt{\text{No Vehicle Score} \times \text{Walkability Score}}$$ |
+## Setting up the HFPA Dashboard
 
-# Access
+In order to properly access the census data required for the HFPA dashboard, you must first request an API Key. Navigate to [Census API Key signup page](https://api.census.gov/data/key_signup.html) and follow the isntructions to sign up for a key.
 
-| GEOID | Year | pop_below_185 | total_pop | pct_below_185 | pct_185_std | Access |
-| --- | --- | --- | --- | --- | --- | --- |
-| Tract | Year | S1701_C01_041 | S0101_C01_001 | $$\frac{\text{pop below 185}}{\text{total pop}}$$ | $$\frac{\text{pct below 185}-\text{Mean(pct below 185)}}{\text{sd(pct below 185)}}$$ | $$\text{(pct 185 std - MIN(pct 185 std))} \times \frac{10}{\text{MAX(pct 185 std)}-\text{MIN(pct 185 std)}}$$ |
+*Note: The API Key should be a 40 character string with numerical and alphabetical characters*
 
-# Utilization
+Once a key has been generated, you will then have to add it to the `get_data.R` file. Find the line underneath the `#Census API Key` comment, and paste the key within the quotes where the code reads `ENTER KEY HERE`.
 
-**CDC 500 Cities Data**
+*Note: The API Key must be within the quotes or you will get an error.*
 
-| Year | URL |
-| --- | --- |
-| 2019 | https://chronicdata.cdc.gov/resource/k86t-wghb.csv?placename=Pittsburgh |
-| 2018 | https://chronicdata.cdc.gov/resource/k25u-mg9b.csv?placename=Pittsburgh |
-| 2017 | https://chronicdata.cdc.gov/resource/kucs-wizg.csv?placename=Pittsburgh |
-| 2016 | https://chronicdata.cdc.gov/resource/5mtz-k78d.csv?placename=Pittsburgh |
+
+## Running the HFPA Dashboard
+
+Open `app.R` and `get_data.R` in R Studio. Make sure that all packages listed below are installed on your machine:
+
+ - `shiny`
+ - `tidyverse`
+ - `tidycensus`
+ - `plotly`
+ - `sf`
+ - `tmap`
+ - `shinyWidgets`
+ 
+ Click the `Run App` button in the upper right-hand corner of R Studio. This should open up the application in your default web browser.
 

@@ -13,7 +13,8 @@ no.walkshed = read_csv('Data/no_walkshed.csv')
 no.walkshed = mutate(no.walkshed, GEOID = as.character(GEOID))
 
 # Census API Key
-census_api_key("842ebd1a7a562d5aa98015a367bdb6c7c4cc5a9b")
+API_KEY = "ENTER KEY HERE"
+census_api_key(API_KEY)
 
 # get.census.var funcion
 get.census.var = function(var.id, year = 2020, var.name, geometry = FALSE) {

@@ -8,7 +8,7 @@ library(shinyWidgets)
 source('get_data.R')
 
 # Load Data from get_data.R for now
-# HFPA.data = get.data()
+HFPA.data = get.data()
 
 
 ui <- fluidPage(
