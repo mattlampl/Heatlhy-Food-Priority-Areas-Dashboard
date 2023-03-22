@@ -1,4 +1,8 @@
-https://mattlampl.shinyapps.io/PGH-HFPA-Dashboard/
+# Viewing the Dashboard
+1. Navigate to https://mattlampl.shinyapps.io/PGH-HFPA-Dashboard/
+2. Click the ***Get Data*** button in the upper left-hand corner.  
+   *Note: Be patient while the data is being fetched. It may take 1-2 minutes to gather all of the data from the census.*
+3. Once the data has been gathered, you will see a popup message indicating that the data has successfully been retrieved.
 
 # Food Security
 
